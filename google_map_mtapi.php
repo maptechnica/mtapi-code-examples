@@ -1,0 +1,144 @@
+<?php
+/**
+ * MAPTECHNICA BASIC GOOGLE MAPS + MT API EXAMPLE
+ * 
+ * This is a pure-JavaScript technique that leverages the Google Maps v3 API.
+ * 
+ * Prerequisites:
+ * 1) You'll need your own Google Maps API key. 
+ * 2) You'll need a MapTechnica API key.  The demo key will work but has a 3-second 
+ *    request delay built in.
+ * 
+ * The Basics:
+ * 
+ * We'll be drawing a full-page Google Maps map.  Then we'll load the example ZIP Code, 
+ * 90210, as a polygon using Google Maps loadGeoJson() method that handles all the AJAX 
+ * and parsing under the hood.
+ *
+ * We'll be using the basic GET URL for the MapTechnica API that includes your key.
+ * Details and documentation are found at https://dev.maptechnica.com/apidocs/
+ * 
+ * Finally, we'll use a technique to extend the map bounds based on the geometry of 90210 
+ * and fit the map to those bounds using the fitBounds() method.  These are all Google 
+ * Maps API methods and vanilla JavaScript.  
+ */
+
+
+$yourGoogleAPIKey = 'YOUR_GOOGLE_API_KEY';
+
+$yourMTAPIKey = 'API_DEMO_KEY'; //<-- get an API key from https://dev.maptechnica.com/my-api-keys
+    
+?><!DOCTYPE html>
+<html>
+<head>
+    <title>Basic Google Maps + MT API Example</title>
+    <meta name="viewport" content="initial-scale=1.0">
+    <meta charset="utf-8">
+    <style>
+    /* Always set the map height explicitly to define the size of the div element that contains the map. */
+      #map {
+        height: 100%;
+      }
+      /* Optional: Makes the sample page fill the window. */
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+    
+<script>
+
+// First, we'll set up the two variables, map and bounds, that must be kept global.
+var map, bounds;
+
+// Now, we'll create the initMap() method that is called-back when the google api is fully
+// loaded below.
+
+function initMap()
+{
+    // init the map object.
+    map = new google.maps.Map(document.getElementById('map'), {
+        center: {
+            // Any coordinates and zoom would do as the map is re-fitted after the poly is loaded.
+            lat: 34.1010568522883,
+            lng: -118.414733170874
+        },
+        zoom: 8
+    });
+    
+    // Now the magic.  Use Google Map's loadGeoJson() method calling the MT API
+    map.data.loadGeoJson('http://api.maps3.dev/v1/zip5/bounds?zip5=90210&key=<?=$yourMTAPIKey;?>');
+    
+    // If we stopped here, we'd have a map with a polygon that is zoomed way out.  Obviously,
+    // we want to focus on that polygon, but because it is loaded asynchronously, we have to 
+    // do the bounds extensions as a callback. Luckily, the Google Maps API provides a method
+    // to accomplish this.
+
+    // We're going to attach a listener to the map.data object.  As the feature is added, 
+    // this listener will be triggered and will process the geometry.    
+    google.maps.event.addListener(map.data, 'addfeature', function(e)
+    {
+        //initialize the bounds
+        bounds = new google.maps.LatLngBounds();
+        
+        var _boundsFound = false; // Will be true if an object is found and processed.
+        
+        // check for a polygon.  90210 happens to be a MultiPolygon, but you must allow
+        // for both types.
+        if (e.feature.getGeometry().getType() === 'Polygon')
+        {
+            // iterate over the paths
+            e.feature.getGeometry().getArray().forEach(function(path)
+            {
+                // iterate over the points in the path
+                path.getArray().forEach(function(latLng)
+                {
+                    // extend the bounds
+                    bounds.extend(latLng);
+                });
+            });
+            
+            _boundsFound = true;
+        }
+        
+        
+        // A multipolygon has an outer wrapper, so we have to traverse it one layer further
+        // in order to get to the chewy center.
+        if (e.feature.getGeometry().getType() === 'MultiPolygon')
+        {
+            // iterate over the polygons contained within the MultiPolygon
+            e.feature.getGeometry().getArray().forEach(function(polygon)
+            {
+                // iterate over the paths
+                polygon.getArray().forEach(function(path)
+                {
+                    //iterate over the points in the path
+                    path.getArray().forEach(function(latLng)
+                    {
+                        // extend the bounds
+                        bounds.extend(latLng);
+                    });
+                });
+            });
+            
+            _boundsFound = true;
+        }
+
+        if(_boundsFound)
+        {
+            map.fitBounds(bounds);
+        }
+    }); //--> end addListener()
+
+} //--> end initMap()
+
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?key=<?=$yourGoogleAPIKey;?>&callback=initMap" async="" defer>
+</script>
+</body>
+</html>
