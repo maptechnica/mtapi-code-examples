@@ -29,10 +29,10 @@
  *
  * Prerequisites:
  * 1) You'll need your own Google Maps API key.
- * 2) You'll need a MapTechnica API key.  The demo key will work but has a 3-second
- *    request delay built in.
+ * 2) You'll need a MapTechnica API key.  The demo key will work but has a 5-second
+ *    request delay built in to discourage folks from using it in production.
  *
- * The Basics:
+ * OVERVIEW:
  *
  * We'll be drawing a full-page Google Maps map.  Then we'll load the example ZIP Code,
  * 90210, as a polygon using Google Maps loadGeoJson() method that handles all the AJAX
@@ -68,7 +68,7 @@ function initMap()
     });
 
     // Now the magic.  Use Google Map's loadGeoJson() method calling the MT API
-    map.data.loadGeoJson('http://api.maps3.dev/v1/zip5/bounds?zip5=90210&key='+yourMTAPIKey);
+    map.data.loadGeoJson('https://api.maptechnica.com/v1/zip5/bounds?zip5=90210&key='+yourMTAPIKey);
 
     // If we stopped here, we'd have a map with a polygon that is zoomed way out.  Obviously,
     // we want to focus on that polygon, but because it is loaded asynchronously, we have to
