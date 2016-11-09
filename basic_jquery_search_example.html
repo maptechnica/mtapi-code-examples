@@ -7,7 +7,7 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
 
     <!-- Bootstrap CSS -->
-<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
     
     <!-- SweetAlert CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/1.1.3/sweetalert.min.css">
@@ -46,33 +46,35 @@ div.spacer { margin-top: 1em; padding-top: 1em; }
 </style>
   <body>
       
-      <div class="container">
+    <div class="container">
           
-    <h1>Basic jQuery Search Example</h1>
-    <p>In this example, we use jQuery to observe a search event, use the input to search the MapTechnica API, and display the results.</p>
-    
-    
-<form class="form-inline">
-  <div class="form-group">
-    <label for="zip5">ZIP Code:</label>
-    <input type="search" class="form-control" id="zip5" placeholder="ZIP Code">
-    <button type="button" class="btn btn-primary" id="searchBtn">
-        <span id="searchBtnTxt">Search</span>
-        <span class="glyphicon glyphicon-refresh glyphicon-spin hidden" aria-hidden="true" id="spinIcon"></span>
-        <span class="glyphicon glyphicon-search" aria-hidden="true" id="searchIcon"></span>
-    </button>
-    
-  </div>
-</form>
+        <h1>Basic jQuery Search Example</h1>
+        <p>In this example, we use jQuery to observe a search event, use the input to search the MapTechnica API, and display the results.</p>
+            
+        <div class="alert alert-warning hidden" id="slow_warning"><strong>Warning:</strong> You are using the API demo key that has a built-in delay. Replace it with your own API key for instantaneous results.</div>
+        
+            
+        <form class="form-inline">
+          <div class="form-group">
+            <label for="zip5">ZIP Code:</label>
+            <input type="search" class="form-control" id="zip5" placeholder="ZIP Code">
+            <button type="button" class="btn btn-primary" id="searchBtn">
+                <span id="searchBtnTxt">Search</span>
+                <span class="glyphicon glyphicon-refresh glyphicon-spin hidden" aria-hidden="true" id="spinIcon"></span>
+                <span class="glyphicon glyphicon-search" aria-hidden="true" id="searchIcon"></span>
+            </button>
+            
+          </div>
+        </form>
+        
+        <div class="clearfix spacer"></div>
+        
+        <div class="alert alert-info mt hidden" id="resultsDiv">
+            <h2>Results:</h2>
+            <div id="resultsCode"></div>
+        </div>
 
-  <div class="clearfix spacer"></div>
-
-<div class="alert alert-info mt hidden" id="resultsDiv">
-    <h2>Results:</h2>
-    <div id="resultsCode"></div>
-</div>
-
-      </div>
+    </div>
     
 
     <!-- jQuery first, then Tether, then Bootstrap JS. -->
@@ -83,102 +85,125 @@ div.spacer { margin-top: 1em; padding-top: 1em; }
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/1.1.3/sweetalert.min.js" type="text/javascript"></script>
 
 <script type="text/javascript">
-    
+/**
+ * MAPTECHNICA BASIC JQUERY SEARCH EXAMPLE
+ *
+ * This is a jQuery based technique to search for a ZIP code and return its centroid
+ * data. This is something like what'd you do to implement a "find a location near me"
+ * feature.
+ *
+ * Prerequisites:
+ * 1) You'll need a MapTechnica API key.  The demo key will work but has a 5-second
+ *    request delay built in to discourage folks from using it in production.
+ *
+ * OVERVIEW:
+ *
+ * We'll be taking the input from the zip code input field, validating it, and
+ * searching the API, and processing the results.
+ *
+ * We'll be using the basic GET URL for the MapTechnica API that includes your key.
+ * Details and documentation are found at https://dev.maptechnica.com/apidocs/
+ *
+ */
 var yourMTAPIKey = 'API_DEMO_KEY'; //<-- get an API key from https://dev.maptechnica.com/my-api-keys
-
-    
-    
-$(document).ready(function() {
-    
-    $("form").submit(function(e){
+// Initialize the page    
+$(document).ready(function()
+{
+    $("form").submit(function(e)
+    {
         e.preventDefault();
     });
-    
-    $('#searchBtn').click(function() {
-        toggleSearching(_searching=true);
+    $('#searchBtn').click(function()
+    {
+        toggleSearching(_searching = true);
         searchForZIP();
     });
     
+    checkForDemoKey();
 });
 
+// When the user clicks the search button, fire this function
 function searchForZIP()
 {
+    // get the entered value
     var zip = $('#zip5').val();
     
-    if(_validInput(zip))
+    // validate the input to see if it's a 5-digit number.
+    if (_validInput(zip))
     {
-        var apiURL = 'https://api.maptechnica.com/v1/zip5/centroid?zip5='+zip+'&key='+yourMTAPIKey;
+        // set up the API URL
+        var apiURL = 'https://api.maptechnica.com/v1/zip5/centroid?zip5=' + zip + '&key=' + yourMTAPIKey;
         
-            
         // Assign handlers immediately after making the request,
         // and remember the jqxhr object for this request
-        var apiJSON = $.getJSON(apiURL, function(data, status, jqXHR) {
-    
-                var _error   = false;
-                var errorMsg = null;
-
-                $.each( data, function( key, val ) {
-                    switch(key)
-                    {
-                        case('error'):
-                            _error = true;
-                            break;
-                        
-                        case('msg'):
-                            errorMsg = val;
-                            break;
-                    }
-                    
-                    if(_error===true)
-                    {
-                        sweetAlert('Oops...', errorMsg, 'error');
-                    }
-                });
-                
-                if(_error!==true)
+        var apiJSON = $.getJSON(apiURL, function(data, status, jqXHR)
+        {
+            var _error = false;
+            var errorMsg = null;
+            $.each(data, function(key, val)
+            {
+                switch (key)
                 {
-                    var result = $.parseJSON(jqXHR.responseText);
-                    
-                    var coordinates = result.features[0].geometry.coordinates;
-                    var lat = coordinates[1];
-                    var lon = coordinates[0];
-                    
-                    var string = '<strong>Success! </strong> ' + zip + ' was found and is located at<br><strong>Lat:</strong> <code>'+ lat + '</code><br><strong>Lon:</strong> <code>' + lon + '</code>';
-                    
-                    $('#resultsCode').html(string);
-                    $('#resultsDiv').removeClass('hidden');
+                case ('error'):
+                    _error = true;
+                    break;
+                case ('msg'):
+                    errorMsg = val;
+                    break;
                 }
-
-        })
-            .fail(function() {
-                sweetAlert('Oops...', 'Something went wrong.', 'error');
-            })
-            .always(function() {
-                toggleSearching(_searching=false);
+                if (_error === true)
+                {
+                    sweetAlert('Oops...', errorMsg, 'error');
+                }
             });
-    
-        
+            if (_error !== true)
+            {
+                // Here's the meat of it.  Assuming the input was valid, we'll parse the JSON that is returned.
+                var result = $.parseJSON(jqXHR.responseText);
+                
+                // Pull out the coordinates from the results json array
+                var coordinates = result.features[0].geometry.coordinates;
+                var lat = coordinates[1];
+                var lon = coordinates[0];
+                
+                // Build the string that will be displayed in the results div
+                var string = '<strong>Success! </strong> ' + zip + ' was found and is located at<br><strong>Lat:</strong> <code>' + lat + '</code><br><strong>Lon:</strong> <code>' + lon + '</code>';
+                
+                // Put that string into the results div
+                $('#resultsCode').html(string);
+                
+                // Show the results div.
+                $('#resultsDiv').removeClass('hidden');
+            }
+            
+        // In the event the GET request fails...    
+        }).fail(function()
+        {
+            sweetAlert('Oops...', 'Something went wrong.', 'error');
+            
+        // No matter what, indicate to the user that a search is under way.
+        }).always(function()
+        {
+            toggleSearching(_searching = false);
+        });
     }
-
 }
 
+// This function validates the input by simply checking that it's a 5-character string.
 function _validInput(input)
 {
-    if(input.length!==5)
+    if (input.length !== 5 ||  !$.isNumeric(input))
     {
         sweetAlert("Oops...", "Please enter a valid 5-digit ZIP Code.", "error");
-
-        toggleSearching(_searching=false);
-
+        toggleSearching(_searching = false);
         return false;
     }
-    
     return true;
 }
 
 function toggleSearching(_searching)
 {
-    if(_searching===true)
+    if (_searching === true)
     {
         $('#searchBtn').prop('disabled', true);
         $('#searchBtnTxt').html('Searching...');
@@ -187,15 +212,20 @@ function toggleSearching(_searching)
         $('#resultsDiv').addClass('hidden');
         return null;
     }
-    
     $('#searchBtn').prop('disabled', false);
     $('#searchBtnTxt').html('Search');
     $('#spinIcon').addClass('hidden');
     $('#searchIcon').removeClass('hidden');
-    
     return null;
 }
 
+function checkForDemoKey()
+{
+    if(yourMTAPIKey === 'API_DEMO_KEY')
+    {
+        $('#slow_warning').removeClass('hidden');
+    }
+}
 
 
 
